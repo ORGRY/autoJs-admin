@@ -4,18 +4,15 @@
     <common-drawer
       :width="900"
       :visible="visible"
-      title="修改模板"
+      title="修改用户账号"
       @close="updateVisible(false)"
       v-if="isUpdate"
       :isShowTab="true"
       :activeKey="activeKey"
-      :tabList="tabList"
       @tabChange="tabChange"
     >
       <!-- 基本信息 -->
-      <template-form v-model:form="state.form" ref="formRef" v-if="activeKey == '1'" />
-      <!-- 配置弹窗 -->
-      <template-config ref="TemplateConfigRef" v-else />
+      <user-form v-model:form="state.form" ref="formRef" v-if="activeKey == '1'" />
 
       <template #extra>
         <div style="height: 32px">
@@ -33,14 +30,14 @@
       :confirm-loading="loading"
       :forceRender="true"
       :maskClosable="false"
-      title="新建模板"
+      title="新建账号"
       :body-style="{ paddingBottom: '8px' }"
       @update:visible="updateVisible"
       @ok="save"
       v-else
       @close="updateVisible(false)"
     >
-      <template-form v-model:form="state.form" ref="formRef" />
+      <user-form v-model:form="state.form" ref="formRef" />
     </a-modal>
   </div>
 </template>
@@ -49,8 +46,9 @@
   import { onMounted, reactive, ref, watch, nextTick } from 'vue';
   import { message } from 'ant-design-vue';
   import CommonDrawer from '/@/components/CommonDrawer/index.vue';
-  import TemplateForm from './user-form.vue';
-  import { ThemeTemplateApi } from '/@/api/system/theme/ThemeTemplateApi';
+  import UserForm from './user-form.vue';
+  // import { ThemeTemplateApi } from '/@/api/system/theme/ThemeTemplateApi';
+  import { ScriptUserApi } from '/@/api/system/script/ScriptUserApi';
 
   const props = defineProps<{
     // 弹窗是否打开
@@ -73,18 +71,6 @@
   // tab默认选中
   const activeKey = ref<string>('1');
 
-  // tab栏列表
-  const tabList = ref<string[]>([
-    {
-      key: '1',
-      name: '基本信息',
-    },
-    {
-      key: '2',
-      name: '属性配置',
-    },
-  ]);
-
   // 提交状态
   const loading = ref<boolean>(false);
 
@@ -93,7 +79,7 @@
 
   // ref
   const formRef = ref(null);
-  const TemplateConfigRef = ref(null);
+  const ScriptConfigRef = ref(null);
 
   onMounted(() => {
     init();
@@ -127,7 +113,7 @@
       state.form = Object.assign({}, props.data);
     } else {
       nextTick(() => {
-        TemplateConfigRef.value.openConfig(props.data.templateId);
+        ScriptConfigRef.value.openConfig(props.data.accountId);
       });
     }
   };
@@ -149,9 +135,9 @@
 
         // 执行编辑或修改
         if (isUpdate.value) {
-          result = ThemeTemplateApi.edit(state.form);
+          result = ScriptUserApi.edit(state.form);
         } else {
-          result = ThemeTemplateApi.add(state.form);
+          result = ScriptUserApi.add(state.form);
         }
         result
           .then((result) => {

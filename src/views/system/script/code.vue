@@ -5,13 +5,22 @@
       <a-card :bordered="false">
         <a-form layout="inline" :model="where">
           <a-row>
-            <a-form-item label="主题模板名称:">
-              <a-input
-                v-model:value.trim="where.templateName"
-                placeholder="请输入主题模板名称"
-                allow-clear
-              />
-            </a-form-item>
+          <a-form-item label="用户账号:" name="userAccount">
+                <a-select
+                  v-model:value.trim="where.userAccount"
+                  show-search
+                  placeholder="请选择用户账号"
+                  style="width: 200px"
+                  :show-arrow="false"
+                  :filter-option="false"
+                  :not-found-content="null"
+                  allow-clear
+                >
+                  <a-select-option v-for="item in userAccountList" :key="item.userAccount">
+                    {{ item.userAccount }}
+                  </a-select-option>
+                </a-select>
+          </a-form-item>
             <a-form-item class="ele-text-center">
               <a-space>
                 <a-button type="primary" @click="reload">查询</a-button>
@@ -29,11 +38,11 @@
         <BasicTable
           :canResize="false"
           ref="tableRef"
-          :api="ThemeTemplateApi.findPage"
+          :api="ScriptCodeApi.findPage"
           :where="where"
           :columns="columns"
           showTableSetting
-          rowKey="templateId"
+          rowKey="registrationId"
           :rowSelection="{
             type: 'checkbox',
             selectedRowKeys: checkedKeys,
@@ -44,47 +53,20 @@
             <div class="table-toolbar">
               <a-space>
                 <a-button type="primary" @click="openEdit()">
-                  <template #icon>
-                    <plus-outlined />
-                  </template>
-                  <span>新建</span>
+                  <span>生成卡密</span>
+                </a-button>
+                  <a-button type="primary" @click="exportTxt()">
+                  <span>导出卡密</span>
                 </a-button>
               </a-space>
             </div>
-          </template>
-
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex == 'templateName'">
-              <a @click="openEdit(record)">{{ record.templateName }}</a>
-            </template>
-
-            <!-- table列表状态栏 -->
-            <!-- Y是激活，N是禁用 -->
-            <template v-if="column.key === 'state'">
-              <a-switch
-                :checked="record.statusFlag === 'Y'"
-                @change="(checked) => editStatus(checked, record)"
-              />
-            </template>
-
-            <!-- table操作栏按钮 -->
-            <template v-else-if="column.key === 'action'">
-              <a-space>
-                <a @click="openEdit(record)">修改</a>
-                <a-divider type="vertical" />
-                <a-popconfirm title="确定要删除此主题模板吗？" @confirm="remove(record)">
-                  <a class="guns-text-danger">删除</a>
-                </a-popconfirm>
-                <a @click="openConfig(record)">配置</a>
-              </a-space>
-            </template>
           </template>
         </BasicTable>
       </a-card>
     </div>
 
     <!-- 编辑弹窗 -->
-    <template-edit
+    <code-edit
       v-model:visible="showEdit"
       :data="current"
       @done="reload"
@@ -95,57 +77,41 @@
 </template>
 
 <script lang="ts" setup>
-  import { reactive, ref } from 'vue';
+  import { reactive, ref , onMounted} from 'vue';
   import { BasicTable } from '/@/components/Table';
   import { message } from 'ant-design-vue';
-  import { ThemeTemplateApi } from '/@/api/system/theme/ThemeTemplateApi';
-  import TemplateEdit from './components/code-edit.vue';
+  import { ScriptCodeApi } from '/@/api/system/script/ScriptCodeApi';
+  import CodeEdit from './components/code-edit.vue';
   
 
   // 查询条件
   const where = reactive({
-    templateName: '',
+    userAccount: '',
   });
 
   // 表格配置
   const columns = ref<string[]>([
     {
-      title: '模板名称',
-      dataIndex: 'templateName',
+      title: '注册码',
+      dataIndex: 'registrationCode',
       width: 160,
       sorter: true,
     },
     {
-      title: '模板编码',
-      dataIndex: 'templateCode',
+      title: '用户账号',
+      dataIndex: 'userAccount',
       width: 160,
     },
     {
-      title: '模板类型',
-      dataIndex: 'templateType',
+      title: '机器码',
+      dataIndex: 'machineCode',
       width: 160,
-      customRender: function ({ text }) {
-        return 1 === text ? '系统类型' : '业务类型';
-      },
     },
     {
-      title: '创建时间',
-      dataIndex: 'createTime',
+      title: '绑定时间',
+      dataIndex: 'bindingTime',
       width: 160,
       sorter: true,
-    },
-    {
-      title: '启用状态',
-      key: 'state',
-      dataIndex: 'statusFlag',
-      width: 100,
-      align: 'center',
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 260,
-      align: 'center',
     },
   ]);
 
@@ -160,6 +126,7 @@
   // 默认选中
   const defaultKey = ref<string>('1');
 
+  const userAccountList = ref<string[]>([]);
   // ref
   const tableRef = ref(null);
 
@@ -179,59 +146,44 @@
    * @Date: 2022-10-12 09:38:29
    */
   const reset = () => {
-    where.templateName = '';
+    where.userAccount = '';
     reload();
   };
 
-  /**
-   * 删除单个
-   *
-   * @author fengshuonan
-   * @date 2021/4/2 17:03
-   */
-  const remove = async (row: any) => {
-    const result = await ThemeTemplateApi.del({ templateId: row.templateId });
-    message.success(result.message);
-    reload();
-  };
-
-  /**
-   * 打开编辑页面
-   *
-   * @author fengshuonan
-   * @date 2021/6/15 23:14
-   */
-  const openEdit = (record: any) => {
+    const openEdit = (record: any) => {
     defaultKey.value = '1';
     current.value = record;
     showEdit.value = true;
   };
 
-  /**
-   * 修改模板启用状态
-   *
-   * @author fengshuonan
-   * @date 2021/12/21 11:30:07
-   */
-  const editStatus = async (checked: boolean, row: any) => {
-    const templateId = row.templateId;
-    // 职位状态：Y-启用，N-禁用
-    const statusFlag = checked ? 'Y' : 'N';
-    const result = await ThemeTemplateApi.updateTemplateStatus({ templateId });
-    message.success(result.message);
-    row.statusFlag = statusFlag;
-    reload();
-  };
-
-  /**
-   * 打开配置
-   *
-   * @author fengshuonan
-   * @date 2021/12/27 14:19:12
-   */
-  const openConfig = (row: any) => {
-    defaultKey.value = '2';
-    current.value = row;
-    showEdit.value = true;
-  };
+  const exportTxt = async (row: any) => {
+  const allStr = await ScriptCodeApi.export({userAccount: where.userAccount});
+      var export_blob = new Blob([allStr]);
+      var save_link = document.createElement("a");
+      save_link.href = window.URL.createObjectURL(export_blob);
+      save_link.download = where.userAccount + '.txt';
+      var ev = document.createEvent("MouseEvents");
+      ev.initMouseEvent(
+        "click",
+        true,
+        false,
+        window,
+        0,
+        0,
+        0,
+        0,
+        0,
+        false,
+        false,
+        false,
+        false,
+        0,
+        null
+      );
+      save_link.dispatchEvent(ev);
+};
+onMounted(async () => {
+    // 查询应用
+    userAccountList.value = await ScriptCodeApi.list();
+  });
 </script>

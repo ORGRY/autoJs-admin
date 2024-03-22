@@ -3,38 +3,31 @@
     layout="horizontal"
     ref="formRef"
     :model="form"
-    :rules="rules"
-    :label-col="{ md: { span: 4 }, sm: { span: 24 } }"
-    :wrapper-col="{ md: { span: 20 }, sm: { span: 24 } }"
+    :label-col="{ md: { span: 6 }, sm: { span: 28 } }"
+    :wrapper-col="{ md: { span: 20 }, sm: { span: 28 } }"
   >
-    <a-form-item label="模板名称:" name="templateName">
+  <a-form-item label="用户账号:" name="userAccount">
+        <a-select
+          v-model:value="form.userAccount"
+          show-search
+          placeholder="请选择用户账号"
+          :show-arrow="false"
+          :filter-option="false"
+          :not-found-content="null"
+          allow-clear
+        >
+          <a-select-option v-for="item in userAccountList" :key="item.userAccount">
+            {{ item.userAccount }}
+          </a-select-option>
+        </a-select>
+  </a-form-item>
+    <a-form-item label="卡密数量:" name="generateNum">
       <a-input
-        v-model:value="form.templateName"
-        placeholder="请输入模板名称"
+        v-model:value="form.generateNum"
+        placeholder="请输入卡密数量"
         allow-clear
         autocomplete="off"
       />
-    </a-form-item>
-
-    <a-form-item label="模板编码:" name="templateCode">
-      <a-input
-        v-model:value="form.templateCode"
-        placeholder="请输入模板编码"
-        allow-clear
-        autocomplete="off"
-      />
-    </a-form-item>
-
-    <a-form-item label="模板类型:" name="templateType">
-      <a-select
-        v-model:value="form.templateType"
-        placeholder="请选择模板类型"
-        allow-clear
-        autocomplete="off"
-      >
-        <a-select-option :value="1">系统类型</a-select-option>
-        <a-select-option :value="2">业务类型</a-select-option>
-      </a-select>
     </a-form-item>
   </a-form>
 </template>
@@ -43,12 +36,9 @@
   import { reactive } from 'vue';
   const props = defineProps<{
     form: Object;
+    userAccountList: Array;
   }>();
 
-  // 验证规则
-  const rules = reactive({
-    templateName: [{ required: true, message: '请输入模板名称', type: 'string', trigger: 'blur' }],
-    templateCode: [{ required: true, message: '请输入模板编码', type: 'string', trigger: 'blur ' }],
-    templateType: [{ required: true, message: '请输入模板类型', type: 'number', trigger: 'blur' }],
-  });
+
+
 </script>

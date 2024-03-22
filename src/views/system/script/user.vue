@@ -5,10 +5,10 @@
       <a-card :bordered="false">
         <a-form layout="inline" :model="where">
           <a-row>
-            <a-form-item label="主题模板名称:">
+            <a-form-item label="用户账号:">
               <a-input
-                v-model:value.trim="where.templateName"
-                placeholder="请输入主题模板名称"
+                v-model:value.trim="where.userAccount"
+                placeholder="请输入用户账号"
                 allow-clear
               />
             </a-form-item>
@@ -29,11 +29,11 @@
         <BasicTable
           :canResize="false"
           ref="tableRef"
-          :api="ThemeTemplateApi.findPage"
+          :api="ScriptUserApi.findPage"
           :where="where"
           :columns="columns"
           showTableSetting
-          rowKey="templateId"
+          rowKey="accountId"
           :rowSelection="{
             type: 'checkbox',
             selectedRowKeys: checkedKeys,
@@ -49,20 +49,25 @@
                   </template>
                   <span>新建</span>
                 </a-button>
+                <a-button>
+                <a-popconfirm title="确定将生成10个账号？" @confirm="batchCreate()">
+                 一键生成
+                </a-popconfirm>  
+                </a-button>
               </a-space>
             </div>
           </template>
 
           <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex == 'templateName'">
-              <a @click="openEdit(record)">{{ record.templateName }}</a>
+            <template v-if="column.dataIndex == 'userAccount'">
+              <a @click="openEdit(record)">{{ record.userAccount }}</a>
             </template>
 
             <!-- table列表状态栏 -->
             <!-- Y是激活，N是禁用 -->
             <template v-if="column.key === 'state'">
               <a-switch
-                :checked="record.statusFlag === 'Y'"
+                :checked="record.useFlag === 2"
                 @change="(checked) => editStatus(checked, record)"
               />
             </template>
@@ -72,10 +77,13 @@
               <a-space>
                 <a @click="openEdit(record)">修改</a>
                 <a-divider type="vertical" />
-                <a-popconfirm title="确定要删除此主题模板吗？" @confirm="remove(record)">
+                <a-popconfirm title="确定要续约30天吗？" @confirm="renewal(record)">
+                  <a>续约</a>
+                </a-popconfirm>
+                <a-divider type="vertical" />
+                <a-popconfirm title="确定要删除此账号吗？" @confirm="remove(record)">
                   <a class="guns-text-danger">删除</a>
                 </a-popconfirm>
-                <a @click="openConfig(record)">配置</a>
               </a-space>
             </template>
           </template>
@@ -84,7 +92,7 @@
     </div>
 
     <!-- 编辑弹窗 -->
-    <template-edit
+    <user-edit
       v-model:visible="showEdit"
       :data="current"
       @done="reload"
@@ -98,47 +106,47 @@
   import { reactive, ref } from 'vue';
   import { BasicTable } from '/@/components/Table';
   import { message } from 'ant-design-vue';
-  import { ThemeTemplateApi } from '/@/api/system/theme/ThemeTemplateApi';
-  import TemplateEdit from './components/user-edit.vue';
+  import { ScriptUserApi } from '/@/api/system/script/ScriptUserApi';
+  import UserEdit from './components/user-edit.vue';  
 
   // 查询条件
   const where = reactive({
-    templateName: '',
+    userAccount: '',
   });
 
   // 表格配置
   const columns = ref<string[]>([
     {
-      title: '模板名称',
-      dataIndex: 'templateName',
+      title: '用户账号',
+      dataIndex: 'userAccount',
       width: 160,
       sorter: true,
     },
     {
-      title: '模板编码',
-      dataIndex: 'templateCode',
-      width: 160,
-    },
-    {
-      title: '模板类型',
-      dataIndex: 'templateType',
+      title: '是否卡密账号',
+      dataIndex: 'cdKeyFlag',
       width: 160,
       customRender: function ({ text }) {
-        return 1 === text ? '系统类型' : '业务类型';
+        return 1 === text ? '否' : '是';
       },
     },
     {
-      title: '创建时间',
-      dataIndex: 'createTime',
+      title: '最大设备数量',
+      dataIndex: 'maxDevices',
       width: 160,
-      sorter: true,
     },
     {
       title: '启用状态',
       key: 'state',
-      dataIndex: 'statusFlag',
+      dataIndex: 'useFlag',
       width: 100,
       align: 'center',
+    },
+    {
+      title: '启用时间',
+      dataIndex: 'useTime',
+      width: 160,
+      sorter: true,
     },
     {
       title: '操作',
@@ -178,7 +186,7 @@
    * @Date: 2022-10-12 09:38:29
    */
   const reset = () => {
-    where.templateName = '';
+    where.userAccount = '';
     reload();
   };
 
@@ -189,7 +197,20 @@
    * @date 2021/4/2 17:03
    */
   const remove = async (row: any) => {
-    const result = await ThemeTemplateApi.del({ templateId: row.templateId });
+    const result = await ScriptUserApi.del({ accountId: row.accountId });
+    message.success(result.message);
+    reload();
+  };
+
+
+  const renewal = async (row: any) => {
+    const result = await ScriptUserApi.renewal({ accountId: row.accountId });
+    message.success(result.message);
+    reload();
+  };
+
+  const batchCreate = async () => {
+    const result = await ScriptUserApi.batchCreate();
     message.success(result.message);
     reload();
   };
@@ -207,30 +228,18 @@
   };
 
   /**
-   * 修改模板启用状态
+   * 修改账号启用状态
    *
    * @author fengshuonan
    * @date 2021/12/21 11:30:07
    */
   const editStatus = async (checked: boolean, row: any) => {
-    const templateId = row.templateId;
-    // 职位状态：Y-启用，N-禁用
-    const statusFlag = checked ? 'Y' : 'N';
-    const result = await ThemeTemplateApi.updateTemplateStatus({ templateId });
+    const accountId = row.accountId;
+    const useFlag = checked ? '2' : '1';
+    const result = await ScriptUserApi.updateUserAccountStatus({ accountId, useFlag });
     message.success(result.message);
-    row.statusFlag = statusFlag;
+    row.useFlag = useFlag;
     reload();
   };
 
-  /**
-   * 打开配置
-   *
-   * @author fengshuonan
-   * @date 2021/12/27 14:19:12
-   */
-  const openConfig = (row: any) => {
-    defaultKey.value = '2';
-    current.value = row;
-    showEdit.value = true;
-  };
 </script>

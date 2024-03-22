@@ -4,18 +4,15 @@
     <common-drawer
       :width="900"
       :visible="visible"
-      title="修改模板"
+      title="修改用户账号"
       @close="updateVisible(false)"
       v-if="isUpdate"
       :isShowTab="true"
       :activeKey="activeKey"
-      :tabList="tabList"
       @tabChange="tabChange"
     >
       <!-- 基本信息 -->
-      <template-form v-model:form="state.form" ref="formRef" v-if="activeKey == '1'" />
-      <!-- 配置弹窗 -->
-      <template-config ref="TemplateConfigRef" v-else />
+      <code-form v-model:form="state.form" ref="formRef" v-if="activeKey == '1'" />
 
       <template #extra>
         <div style="height: 32px">
@@ -28,19 +25,20 @@
 
     <!-- 新增 -->
     <a-modal
-      :width="900"
+      :width="350"
       :visible="visible"
       :confirm-loading="loading"
       :forceRender="true"
       :maskClosable="false"
-      title="新建模板"
+      title="生成卡密"
       :body-style="{ paddingBottom: '8px' }"
       @update:visible="updateVisible"
       @ok="save"
       v-else
       @close="updateVisible(false)"
     >
-      <template-form v-model:form="state.form" ref="formRef" />
+      <code-form v-model:form="state.form" ref="formRef" 
+        :userAccountList="userAccountList"/>
     </a-modal>
   </div>
 </template>
@@ -49,8 +47,8 @@
   import { onMounted, reactive, ref, watch, nextTick } from 'vue';
   import { message } from 'ant-design-vue';
   import CommonDrawer from '/@/components/CommonDrawer/index.vue';
-  import TemplateForm from './user-form.vue';
-  import { ThemeTemplateApi } from '/@/api/system/theme/ThemeTemplateApi';
+  import CodeForm from './code-form.vue';
+  import { ScriptCodeApi } from '/@/api/system/script/ScriptCodeApi';
 
   const props = defineProps<{
     // 弹窗是否打开
@@ -73,27 +71,15 @@
   // tab默认选中
   const activeKey = ref<string>('1');
 
-  // tab栏列表
-  const tabList = ref<string[]>([
-    {
-      key: '1',
-      name: '基本信息',
-    },
-    {
-      key: '2',
-      name: '属性配置',
-    },
-  ]);
-
   // 提交状态
   const loading = ref<boolean>(false);
 
   // 是否是修改
   const isUpdate = ref<boolean>(false);
-
+  const userAccountList = ref<string[]>([]);
   // ref
   const formRef = ref(null);
-  const TemplateConfigRef = ref(null);
+  const ScriptConfigRef = ref(null);
 
   onMounted(() => {
     init();
@@ -120,17 +106,6 @@
     }
   };
 
-  // tab栏切换
-  const tabChange = (key: string) => {
-    activeKey.value = key;
-    if (key == '1') {
-      state.form = Object.assign({}, props.data);
-    } else {
-      nextTick(() => {
-        TemplateConfigRef.value.openConfig(props.data.templateId);
-      });
-    }
-  };
 
   /**
    * 保存和修改模板
@@ -149,9 +124,9 @@
 
         // 执行编辑或修改
         if (isUpdate.value) {
-          result = ThemeTemplateApi.edit(state.form);
+          result = ScriptCodeApi.edit(state.form);
         } else {
-          result = ThemeTemplateApi.add(state.form);
+          result = ScriptCodeApi.batchCreate(state.form);
         }
         result
           .then((result) => {
@@ -186,4 +161,9 @@
   const updateVisible = (value: boolean) => {
     emits('update:visible', value);
   };
+
+  onMounted(async () => {
+    // 查询应用
+    userAccountList.value = await ScriptCodeApi.list();
+  });
 </script>
